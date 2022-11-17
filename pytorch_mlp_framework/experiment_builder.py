@@ -155,6 +155,11 @@ class ExperimentBuilder(nn.Module):
         """
         ########################################
         
+        for name, param in named_parameters:
+            avg = np.mean(np.abs(param.detach().numpy()))
+            all_grads.append(avg)
+            layers.append(name)
+        
         
         ########################################
             
