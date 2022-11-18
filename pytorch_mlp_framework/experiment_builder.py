@@ -155,17 +155,22 @@ class ExperimentBuilder(nn.Module):
         k below to collect absolute mean of the gradients for each layer in all_grads with the             layer names in layers.
         """
         
-        print("Named Parameters", named_parameters)
-        print("Type: ", type(named_parameters))
-        print("Callable", callable(named_parameters))
+        
         for name, param in named_parameters:
-            print("Name", name)
-            print("Parameter", param)
-            print("Numpy Param", param.detach().numpy())
+            #separate the layer name and the parameter array
+            #clean the name of the layer to make it more concise
+            my_str = 'layer_dict.'
+            name = name.replace(my_str, '')
+            #transform the tensor to a numpy ndarray and take the mean of the absolute values
             avg = np.mean(np.abs(param.detach().numpy()))
             print("Average",  avg)
-            all_grads.append(avg)
-            layers.append(name)
+            bias = 'bias'
+            if bias in name:
+                #dont consider the biases
+                break
+            else:
+                all_grads.append(avg)
+                layers.append(name)
         
         
         
