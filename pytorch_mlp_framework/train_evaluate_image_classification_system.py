@@ -1,5 +1,8 @@
 import numpy as np
 import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
 from torch.utils.data import DataLoader
 from torchvision import transforms
 
@@ -7,8 +10,119 @@ import mlp.data_providers as data_providers
 from pytorch_mlp_framework.arg_extractor import get_args
 from pytorch_mlp_framework.experiment_builder import ExperimentBuilder
 from pytorch_mlp_framework.model_architectures import *
+
 import os 
 # os.environ["CUDA_VISIBLE_DEVICES"]="0"
+
+class ConvolutionalProcessingBlockBN(nn.Module):
+    def __init__(self, input_shape, num_filters, kernel_size, padding, bias, dilation):
+        super(ConvolutionalProcessingBlockBN, self).__init__()
+
+        self.num_filters = num_filters
+        self.kernel_size = kernel_size
+        self.input_shape = input_shape
+        self.padding = padding
+        self.bias = bias
+        self.dilation = dilation
+        self.bn = nn.BatchNorm2d(input_shape[1])
+        self.build_module()
+
+    def build_module(self):
+    	
+        
+        self.layer_dict = nn.ModuleDict()
+        x = torch.zeros(self.input_shape)
+        out = x
+
+        self.layer_dict['conv_0'] = nn.Conv2d(in_channels=out.shape[1], out_channels=self.num_filters, bias=self.bias,
+                                              kernel_size=self.kernel_size, dilation=self.dilation,
+                                              padding=self.padding, stride=1)
+
+        out = self.layer_dict['conv_0'].forward(out)
+        out = self.bn(out)
+        out = F.leaky_relu(out)
+
+        self.layer_dict['conv_1'] = nn.Conv2d(in_channels=out.shape[1], out_channels=self.num_filters, bias=self.bias,
+                                              kernel_size=self.kernel_size, dilation=self.dilation,
+                                              padding=self.padding, stride=1)
+
+        out = self.layer_dict['conv_1'].forward(out)
+        out = self.bn(out)
+        out = F.leaky_relu(out)
+
+        print(out.shape)
+
+    def forward(self, x):
+        m = nn.BatchNorm2d(32)
+        out = x
+
+        out = self.layer_dict['conv_0'].forward(out)
+        out = self.bn(out)
+        out = F.leaky_relu(out)
+
+        out = self.layer_dict['conv_1'].forward(out)
+        out = self.bn(out)
+        out = F.leaky_relu(out)
+
+        return out
+
+class ConvolutionalDimensionalityReductionBlockBN(nn.Module):
+    def __init__(self, input_shape, num_filters, kernel_size, padding, bias, dilation, reduction_factor):
+        super(ConvolutionalDimensionalityReductionBlockBN, self).__init__()
+
+        self.num_filters = num_filters
+        self.kernel_size = kernel_size
+        self.input_shape = input_shape
+        self.padding = padding
+        self.bias = bias
+        self.dilation = dilation
+        self.reduction_factor = reduction_factor
+        self.build_module()
+        
+
+    def build_module(self):
+        m = nn.BatchNorm2d(32)
+        self.layer_dict = nn.ModuleDict()
+        x = torch.zeros(self.input_shape)
+        out = x
+
+        self.layer_dict['conv_0'] = nn.Conv2d(in_channels=out.shape[1], out_channels=self.num_filters, bias=self.bias,
+                                              kernel_size=self.kernel_size, dilation=self.dilation,
+                                              padding=self.padding, stride=1)
+        
+        out = self.layer_dict['conv_0'].forward(out)
+        self.bn1 = nn.BatchNorm2d(out.shape[1])
+        out = self.bn1(out)
+        out = F.leaky_relu(out)
+       
+
+        out = F.avg_pool2d(out, self.reduction_factor)
+
+        self.layer_dict['conv_1'] = nn.Conv2d(in_channels=out.shape[1], out_channels=self.num_filters, bias=self.bias,
+                                              kernel_size=self.kernel_size, dilation=self.dilation,
+                                              padding=self.padding, stride=1)
+
+        out = self.layer_dict['conv_1'].forward(out)
+        self.bn2 = nn.BatchNorm2d(out.shape[1])
+        out = self.bn2(out)
+        out = F.leaky_relu(out)
+
+        print(out.shape)
+
+    def forward(self, x):
+        out = x
+
+        out = self.layer_dict['conv_0'].forward(out)
+        out = self.bn1(out)
+        out = F.leaky_relu(out)
+
+        out = F.avg_pool2d(out, self.reduction_factor)
+
+        out = self.layer_dict['conv_1'].forward(out)
+        out = self.bn2(out)
+        out = F.leaky_relu(out)
+
+        return out
 
 args = get_args()  # get arguments from command line
 rng = np.random.RandomState(seed=args.seed)  # set the seeds for the experiment
@@ -47,6 +161,12 @@ if args.block_type == 'conv_block':
 elif args.block_type == 'empty_block':
     processing_block_type = EmptyBlock
     dim_reduction_block_type = EmptyBlock
+elif args.block_type == 'conv_bn_block':
+    processing_block_type = ConvolutionalProcessingBlockBN
+    dim_reduction_block_type = ConvolutionalDimensionalityReductionBlockBN
+elif args.block_type == 'conv_bn_rc_block':
+    processing_block_type = ConvolutionalProcessingBlockBNRC
+    dim_reduction_block_type = ConvolutionalDimensionalityReductionBlockBNRC
 else:
     raise ModuleNotFoundError
 
