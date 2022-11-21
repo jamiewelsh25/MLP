@@ -161,17 +161,18 @@ class ExperimentBuilder(nn.Module):
             #clean the name of the layer to make it more concise
             my_str = 'layer_dict.'
             name = name.replace(my_str, '')
-            #transform the tensor to a numpy ndarray and take the mean of the absolute values
-            avg = np.mean(np.abs(param.detach().numpy()))
-            print("Average",  avg)
-            bias = 'bias'
-            if bias in name:
-                #dont consider the biases
-                s = 6
-            else:
-                all_grads.append(avg)
-                layers.append(name)
-        
+            name = name.replace(my_str, '')
+            #take the absolute mean of the parameter
+            avg = torch.abs(torch.mean(param)).detach().numpy()
+            
+            
+            
+            all_grads.append(avg)
+            layers.append(name)
+        for j in range(len(layers)):
+            if layers[j][-4:] == 'bias':
+                layers.pop(j)
+                all_grads.pop(j)
         
         
             
