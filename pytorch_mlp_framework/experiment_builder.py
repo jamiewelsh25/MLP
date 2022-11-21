@@ -160,20 +160,19 @@ class ExperimentBuilder(nn.Module):
             #separate the layer name and the parameter array
             #clean the name of the layer to make it more concise
             my_str = 'layer_dict.'
+            name = str(name)
+            
             name = name.replace(my_str, '')
             name = name.replace(my_str, '')
             #take the absolute mean of the parameter
-            avg = torch.abs(torch.mean(param)).detach().numpy()
+            avg = torch.abs(torch.mean(param.grad))
             
             
-            
-            all_grads.append(avg)
-            layers.append(name)
-        for j in range(len(layers)):
-            if layers[j][-4:] == 'bias':
-                layers.pop(j)
-                all_grads.pop(j)
-        
+            if 'bias' in name:
+                continue
+            else:
+                all_grads.append(avg)
+                layers.append(name)
         
             
         
