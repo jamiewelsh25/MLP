@@ -72,7 +72,7 @@ class ExperimentBuilder(nn.Module):
         print('Total number of conv layers', num_conv_layers)
         print('Total number of linear layers', num_linear_layers)
 
-        self.optimizer = optim.Adam(self.parameters(), amsgrad=False,
+        self.optimizer = optim.Adam(self.parameters(), lr = 1e-2, amsgrad=False,
                                     weight_decay=weight_decay_coefficient)
         self.learning_rate_scheduler = optim.lr_scheduler.CosineAnnealingLR(self.optimizer,
                                                                             T_max=num_epochs,
@@ -165,7 +165,7 @@ class ExperimentBuilder(nn.Module):
             name = name.replace(my_str, '')
             name = name.replace(my_str, '')
             #take the absolute mean of the parameter
-            avg = torch.mean(torch.abs(param.grad))
+            avg = np.mean(np.abs(param.detach().numpy()))
             
             
             if 'bias' in name:
